@@ -15,7 +15,9 @@
 
 struct _FlutterBluePlusPlugin {
   GObject parent_instance;
-  int *centralManager = nullptr;
+
+  //BluetoothAdapter my_bluetooth_adapter;
+  bool is_scanning = false;
 
   bool isAdapterOn(){
     return true;
@@ -23,7 +25,6 @@ struct _FlutterBluePlusPlugin {
 };
 
 G_DEFINE_TYPE(FlutterBluePlusPlugin, flutter_blue_plus_plugin, g_object_get_type())
-
 
 // Called when a method call is received from Flutter.
 static void flutter_blue_plus_plugin_handle_method_call(
@@ -36,37 +37,25 @@ static void flutter_blue_plus_plugin_handle_method_call(
   if (strcmp(method, "getPlatformVersion") == 0) {
     response = get_platform_version();
 
+  }else if (strcmp(method, "isSupported")){
+    response = is_supported(self);
+
   }else if (strcmp(method, "flutterHotRestart") == 0) {
-    // if ([@"flutterHotRestart" isEqualToString:call.method])
-    //     {
-    //         // no adapter?
-    //         if (self.centralManager == nil) {
-    //             result(@(0)); // no work to do
-    //             return;
-    //         }
+    response = flutter_hot_restart(self);
+  } else {
+    response = FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
+  }
 
-    //         if ([self isAdapterOn]) {
-    //             [self.centralManager stopScan];
-    //         }
+  fl_method_call_respond(method_call, response, nullptr);
+}
 
-    //         [self disconnectAllDevices:@"flutterHotRestart"];
+FlMethodResponse* is_supported(FlutterBluePlusPlugin* self) {
+    return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_bool(true)));
+}
 
-    //         Log(LDEBUG, @"connectedPeripherals: %lu", self.connectedPeripherals.count);
-
-    //         if (self.connectedPeripherals.count == 0) {
-    //             [self.knownPeripherals removeAllObjects];
-    //         }
-            
-    //         result(@(self.connectedPeripherals.count));
-    //         return;
-    //     }
-
+FlMethodResponse* flutter_hot_restart(FlutterBluePlusPlugin* self) {
     // no adapter ? 
     std::cout << "-flutterHotRestart-" << std::endl;
-
-    if(self->centralManager == nullptr){
-      response = FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_int(0)));
-    }
 
     if(self->isAdapterOn()){
       std::cout << "-Adapter is on-" << std::endl;
@@ -74,11 +63,7 @@ static void flutter_blue_plus_plugin_handle_method_call(
 
     std::cout << "connectedPeripherals: " <<  std::endl;
 
-  } else {
-    response = FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
-  }
-
-  fl_method_call_respond(method_call, response, nullptr);
+    return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_int(0)));
 }
 
 FlMethodResponse* get_platform_version() {

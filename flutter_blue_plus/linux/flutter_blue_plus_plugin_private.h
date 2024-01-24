@@ -8,3 +8,5 @@
 
 // Handles the getPlatformVersion method call.
 FlMethodResponse *get_platform_version();
+FlMethodResponse *is_supported(FlutterBluePlusPlugin* self);
+FlMethodResponse *flutter_hot_restart(FlutterBluePlusPlugin* self);
