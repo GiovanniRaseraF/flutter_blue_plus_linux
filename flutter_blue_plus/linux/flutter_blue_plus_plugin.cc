@@ -1,4 +1,5 @@
 #include "include/flutter_blue_plus/flutter_blue_plus_plugin.h"
+#include "include/flutter_blue_plus/test.h"
 
 #include <flutter_linux/flutter_linux.h>
 #include <gtk/gtk.h>
@@ -6,17 +7,24 @@
 
 #include <cstring>
 #include <iostream>
+#include <atomic>
+#include <chrono>
+#include <cstdlib>
+#include <iomanip>
+#include <thread>
 
 #include "flutter_blue_plus_plugin_private.h"
+
 
 #define FLUTTER_BLUE_PLUS_PLUGIN(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), flutter_blue_plus_plugin_get_type(), \
                               FlutterBluePlusPlugin))
 
-struct _FlutterBluePlusPlugin {
-  GObject parent_instance;
 
-  //BluetoothAdapter my_bluetooth_adapter;
+
+struct _FlutterBluePlusPlugin {
+  
+  GObject parent_instance;
   bool is_scanning = false;
 
   bool isAdapterOn(){
@@ -37,7 +45,8 @@ static void flutter_blue_plus_plugin_handle_method_call(
   if (strcmp(method, "getPlatformVersion") == 0) {
     response = get_platform_version();
 
-  }else if (strcmp(method, "isSupported")){
+  }else if (strcmp(method, "isSupported") == 0){
+    hello();
     response = is_supported(self);
 
   }else if (strcmp(method, "flutterHotRestart") == 0) {
@@ -50,7 +59,9 @@ static void flutter_blue_plus_plugin_handle_method_call(
 }
 
 FlMethodResponse* is_supported(FlutterBluePlusPlugin* self) {
-    return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_bool(true)));
+    bool r = false;//self->conn.is_initialized();
+
+    return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_bool(r)));
 }
 
 FlMethodResponse* flutter_hot_restart(FlutterBluePlusPlugin* self) {
