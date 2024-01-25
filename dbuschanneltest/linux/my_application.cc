@@ -1,9 +1,7 @@
 #include "my_application.h"
 
 #include <flutter_linux/flutter_linux.h>
-#include <math.h>
-#include <dbus/dbus.h>
-#include <iostream>
+
 #ifdef GDK_WINDOWING_X11
 #include <gdk/gdkx.h>
 #endif
@@ -18,68 +16,27 @@ struct _MyApplication {
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
+MyDBus globaldbus{};
+
 static FlMethodResponse* get_battery_level() {
-   DBusError dbus_error;
-    DBusConnection * dbus_conn = nullptr;
-    DBusMessage * dbus_msg = nullptr;
-    DBusMessage * dbus_reply = nullptr;
-    const char * dbus_result = nullptr;
+    return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_int(30)));
+}
 
-    // Initialize D-Bus error
-    ::dbus_error_init(&dbus_error);
-
-    // Connect to D-Bus
-    if ( nullptr == (dbus_conn = ::dbus_bus_get(DBUS_BUS_SYSTEM, &dbus_error)) ) {
-        ::perror(dbus_error.name);
-        ::perror(dbus_error.message);
-
-    // Compose remote procedure call
-    } else if ( nullptr == (dbus_msg = ::dbus_message_new_method_call("org.freedesktop.DBus", "/", "org.freedesktop.DBus.Introspectable", "Introspect")) ) {
-        ::dbus_connection_unref(dbus_conn);
-        ::perror("ERROR: ::dbus_message_new_method_call - Unable to allocate memory for the message!");
-
-    // Invoke remote procedure call, block for response
-    } else if ( nullptr == (dbus_reply = ::dbus_connection_send_with_reply_and_block(dbus_conn, dbus_msg, DBUS_TIMEOUT_USE_DEFAULT, &dbus_error)) ) {
-        ::dbus_message_unref(dbus_msg);
-        ::dbus_connection_unref(dbus_conn);
-        ::perror(dbus_error.name);
-        ::perror(dbus_error.message);
-
-    // Parse response
-    } else if ( !::dbus_message_get_args(dbus_reply, &dbus_error, DBUS_TYPE_STRING, &dbus_result, DBUS_TYPE_INVALID) ) {
-        ::dbus_message_unref(dbus_msg);
-        ::dbus_message_unref(dbus_reply);
-        ::dbus_connection_unref(dbus_conn);
-        ::perror(dbus_error.name);
-        ::perror(dbus_error.message);
-
-    // Work with the results of the remote procedure call
-    } else {
-        std::cout << "Connected to D-Bus as \"" << ::dbus_bus_get_unique_name(dbus_conn) << "\"." << std::endl;
-        std::cout << "Introspection Result:" << std::endl;
-        std::cout << std::endl << dbus_result << std::endl << std::endl;
-        ::dbus_message_unref(dbus_msg);
-        ::dbus_message_unref(dbus_reply);
-
-        /*
-         * Applications must not close shared connections -
-         * see dbus_connection_close() docs. This is a bug in the application.
-         */
-        //::dbus_connection_close(dbus_conn);
-
-        // When using the System Bus, unreference
-        // the connection instead of closing it
-        ::dbus_connection_unref(dbus_conn);
-    } 
-    return FL_METHOD_RESPONSE(fl_method_error_response_new(
-        "UNAVAILABLE", "Device does not have a battery.", nullptr));
+static FlMethodResponse* get_platform_verision(){
+    return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_string("Linux Ubuntu")));
 }
 
 static void battery_method_call_handler(FlMethodChannel* channel,
                                         FlMethodCall* method_call,
                                         gpointer user_data) {
   g_autoptr(FlMethodResponse) response = nullptr;
-  if (strcmp(fl_method_call_get_name(method_call), "getBatteryLevel") == 0) {
+  std::string mcall = fl_method_call_get_name(method_call);
+
+  if ("getBatteryLevel" == mcall) {
+    response = get_battery_level();
+  } else if("getPlatformVersion" == mcall){
+    response = get_platform_verision();
+  } else if("flutterHotRestart" == mcall){
     response = get_battery_level();
   } else {
     response = FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
