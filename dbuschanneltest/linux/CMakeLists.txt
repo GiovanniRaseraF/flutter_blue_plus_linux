@@ -88,6 +88,10 @@ endif()
 #find_package(simpledbus REQUIRED)
 #target_link_libraries(${BINARY_NAME} PRIVATE simpledbus::simpledbus)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/SimpleBLE/simpledbus)
+target_link_libraries(${BINARY_NAME} PRIVATE simpledbus::simpledbus)
+
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/SimpleBLE/simplebluez)
+target_link_libraries(${BINARY_NAME} PRIVATE simplebluez::simplebluez)
 
 # Run the Flutter tool portions of the build. This must not be removed.
 add_dependencies(${BINARY_NAME} flutter_assemble)

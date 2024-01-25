@@ -16,7 +16,7 @@ struct _MyApplication {
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
-MyDBus globaldbus{};
+SimpleBluez::Bluez bluez;
 
 static FlMethodResponse* get_battery_level() {
     return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_int(30)));
@@ -24,6 +24,9 @@ static FlMethodResponse* get_battery_level() {
 
 static FlMethodResponse* get_platform_verision(){
     return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_string("Linux Ubuntu")));
+}
+static FlMethodResponse* connected_count(){
+    return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_int(1)));
 }
 
 static void battery_method_call_handler(FlMethodChannel* channel,
@@ -38,6 +41,8 @@ static void battery_method_call_handler(FlMethodChannel* channel,
     response = get_platform_verision();
   } else if("flutterHotRestart" == mcall){
     response = get_battery_level();
+  } else if("connectedCount" == mcall){
+    response = connected_count();
   } else {
     response = FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
   }
@@ -93,7 +98,19 @@ g_autoptr(FlStandardMethodCodec) codec = fl_standard_method_codec_new();
       self->battery_channel, battery_method_call_handler, self, nullptr);
   gtk_widget_grab_focus(GTK_WIDGET(view));
 }
+struct MyDBus
+{
+  int count = 0;
+  SimpleBluez::Bluez bluez;
 
+  MyDBus(){  
+    bluez.init();
+  }
+
+  int get_connection_count(){
+    return bluez.interfaces_count();
+  }
+};
 // Implements GApplication::local_command_line.
 static gboolean my_application_local_command_line(GApplication* application, gchar*** arguments, int* exit_status) {
   MyApplication* self = MY_APPLICATION(application);
@@ -127,7 +144,9 @@ static void my_application_class_init(MyApplicationClass* klass) {
   G_OBJECT_CLASS(klass)->dispose = my_application_dispose;
 }
 
-static void my_application_init(MyApplication* self) {}
+static void my_application_init(MyApplication* self) {
+  bluez.init();
+}
 
 MyApplication* my_application_new() {
   return MY_APPLICATION(g_object_new(my_application_get_type(),
