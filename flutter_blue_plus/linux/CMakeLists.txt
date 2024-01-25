@@ -11,7 +11,6 @@ project(${PROJECT_NAME} LANGUAGES CXX)
 # not be changed.
 set(PLUGIN_NAME "flutter_blue_plus_plugin")
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Any new source files that you add to the plugin should be added here.
 list(APPEND PLUGIN_SOURCES
@@ -45,8 +44,6 @@ target_link_libraries(${PLUGIN_NAME} PRIVATE flutter)
 target_link_libraries(${PLUGIN_NAME} PRIVATE PkgConfig::GTK)
 
 # try to link simplebluez
-find_package(fmt CONFIG REQUIRED)
-target_link_libraries(${PLUGIN_NAME} PRIVATE fmt)
 find_package(simplebluez CONFIG REQUIRED)
 target_link_libraries(${PLUGIN_NAME} PRIVATE simplebluez pthread)
 

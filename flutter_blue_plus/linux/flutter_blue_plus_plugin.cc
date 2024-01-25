@@ -42,6 +42,9 @@ static void flutter_blue_plus_plugin_handle_method_call(
 
   const gchar* method = fl_method_call_get_name(method_call);
 
+  //SimpleBluez::Bluez bluez;
+  //bluez.init();
+
   if (strcmp(method, "getPlatformVersion") == 0) {
     response = get_platform_version();
 

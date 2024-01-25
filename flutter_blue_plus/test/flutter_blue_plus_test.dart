@@ -20,10 +20,9 @@ void main() {
   });
 
   test('getPlatformVersion', () async {
-    FlutterBluePlus flutterBluePlusPlugin = FlutterBluePlus();
     MockFlutterBluePlusPlatform fakePlatform = MockFlutterBluePlusPlatform();
     FlutterBluePlusPlatform.instance = fakePlatform;
 
-    expect(await flutterBluePlusPlugin.getPlatformVersion(), '42');
+    expect(await FlutterBluePlus.getPlatformVersion(), '42');
   });
 }
