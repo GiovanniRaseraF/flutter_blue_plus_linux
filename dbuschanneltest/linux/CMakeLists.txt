@@ -61,8 +61,6 @@ add_definitions(-DAPPLICATION_ID="${APPLICATION_ID}")
 #
 # Any new source files that you add to the application should be added here.
 add_executable(${BINARY_NAME}
-  "${CMAKE_CURRENT_SOURCE_DIR}/libs/Path.cpp"
-
   "main.cc"
   "my_application.cc"
   "${FLUTTER_MANAGED_DIR}/generated_plugin_registrant.cc"
@@ -87,8 +85,9 @@ if(Boost_FOUND)
     target_link_libraries(${BINARY_NAME} PRIVATE ${Boost_LIBRARIES})
 endif()
 
-find_package(simpledbus REQUIRED)
-target_link_libraries(${BINARY_NAME} PRIVATE simpledbus::simpledbus)
+#find_package(simpledbus REQUIRED)
+#target_link_libraries(${BINARY_NAME} PRIVATE simpledbus::simpledbus)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/SimpleBLE/simpledbus)
 
 # Run the Flutter tool portions of the build. This must not be removed.
 add_dependencies(${BINARY_NAME} flutter_assemble)
