@@ -1,0 +1,12 @@
+[
+{
+  "directory": "/home/fdsa/repos/flutter_blue_plus_linux/dbus_cpp/build",
+  "command": "/usr/bin/g++ -I/home/fdsa/repos/flutter_blue_plus_linux/dbus_cpp/include -I/usr/include/dbus-1.0 -I/usr/lib/x86_64-linux-gnu/dbus-1.0/include -Wall -Wextra -rdynamic -g -std=gnu++17 -o CMakeFiles/dbuscpp.dir/src/connection.cc.o -c /home/fdsa/repos/flutter_blue_plus_linux/dbus_cpp/src/connection.cc",
+  "file": "/home/fdsa/repos/flutter_blue_plus_linux/dbus_cpp/src/connection.cc"
+},
+{
+  "directory": "/home/fdsa/repos/flutter_blue_plus_linux/dbus_cpp/build",
+  "command": "/usr/bin/g++ -I/home/fdsa/repos/flutter_blue_plus_linux/dbus_cpp/include -I/usr/include/dbus-1.0 -I/usr/lib/x86_64-linux-gnu/dbus-1.0/include -Wall -Wextra -rdynamic -g -std=gnu++17 -o CMakeFiles/dbuscpp.dir/main.cpp.o -c /home/fdsa/repos/flutter_blue_plus_linux/dbus_cpp/main.cpp",
+  "file": "/home/fdsa/repos/flutter_blue_plus_linux/dbus_cpp/main.cpp"
+}
+]

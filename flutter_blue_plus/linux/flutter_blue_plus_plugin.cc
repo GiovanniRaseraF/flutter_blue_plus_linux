@@ -14,6 +14,11 @@
 
 #include "flutter_blue_plus_plugin_private.h"
 
+#include <boost/array.hpp>
+#include <boost/filesystem.hpp>
+
+#include <simplebluez/Bluez.h>
+
 
 #define FLUTTER_BLUE_PLUS_PLUGIN(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), flutter_blue_plus_plugin_get_type(), \
@@ -40,7 +45,7 @@ static void flutter_blue_plus_plugin_handle_method_call(
   g_autoptr(FlMethodResponse) response = nullptr;
 
   const gchar* method = fl_method_call_get_name(method_call);
-
+  SimpleBluez::Bluez bluez;
   if (strcmp(method, "getPlatformVersion") == 0) {
     response = get_platform_version();
 

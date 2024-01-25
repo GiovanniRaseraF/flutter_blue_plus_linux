@@ -5,12 +5,15 @@ cmake_minimum_required(VERSION 3.10)
 
 # Project-level configuration.
 set(PROJECT_NAME "flutter_blue_plus")
+
 project(${PROJECT_NAME} LANGUAGES CXX)
 
 # This value is used when generating builds using this plugin, so it must
 # not be changed.
 set(PLUGIN_NAME "flutter_blue_plus_plugin")
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 
 # Any new source files that you add to the plugin should be added here.
 list(APPEND PLUGIN_SOURCES
@@ -43,7 +46,24 @@ target_include_directories(${PLUGIN_NAME} INTERFACE
 target_link_libraries(${PLUGIN_NAME} PRIVATE flutter)
 target_link_libraries(${PLUGIN_NAME} PRIVATE PkgConfig::GTK)
 
+# boost
+set(Boost_USE_STATIC_LIBS OFF) 
+set(Boost_USE_MULTITHREADED ON)  
+set(Boost_USE_STATIC_RUNTIME OFF) 
+find_package(Boost 1.70.0 REQUIRED) 
 
+if(Boost_FOUND)
+    include_directories(${Boost_INCLUDE_DIRS}) 
+    target_link_libraries(${PLUGIN_NAME} PRIVATE ${Boost_LIBRARIES})
+endif()
+
+# bluez
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/SimpleBLE/simpledbus)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/SimpleBLE/simpledbus/include)
+target_link_libraries(${PLUGIN_NAME} PRIVATE simpledbus)
+
+#add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/SimpleBLE/simplebluez)
+#target_link_libraries(${PLUGIN_NAME} PRIVATE simplebluez::simplebluez)
 
 # List of absolute paths to libraries that should be bundled with the plugin.
 # This list could contain prebuilt libraries, or libraries created by an
