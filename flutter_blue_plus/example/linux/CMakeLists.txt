@@ -75,8 +75,8 @@ target_link_libraries(${BINARY_NAME} PRIVATE flutter)
 target_link_libraries(${BINARY_NAME} PRIVATE PkgConfig::GTK)
 
 # try to link simplebluez
-find_package(simplebluez CONFIG REQUIRED)
-target_link_libraries(${BINARY_NAME} PRIVATE simplebluez::simplebluez)
+# find_package(simplebluez CONFIG REQUIRED)
+# target_link_libraries(${BINARY_NAME} PRIVATE simplebluez::simplebluez)
 
 # Run the Flutter tool portions of the build. This must not be removed.
 add_dependencies(${BINARY_NAME} flutter_assemble)

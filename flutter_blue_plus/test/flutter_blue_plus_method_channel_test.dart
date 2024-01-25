@@ -6,24 +6,24 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   MethodChannelFlutterBluePlus platform = MethodChannelFlutterBluePlus();
-  //const MethodChannel channel = MethodChannel('flutter_blue_plus');
+  const MethodChannel channel = MethodChannel('flutter_blue_plus');
 
   setUp(() {
-    // TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
-    //   channel,
-    //   (MethodCall methodCall) async {
-    //     return '42';
-    //   },
-    // );
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+      channel,
+      (MethodCall methodCall) async {
+        return '42';
+      },
+    );
     
   });
 
   tearDown(() {
-    //TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel, null);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel, null);
   });
 
   test('getPlatformVersion', () async {
-    //expect(await platform.getPlatformVersion(), '42');
-    await platform.getPlatformVersion();
+    expect(await platform.getPlatformVersion(), '42');
+    platform.getPlatformVersion();
   });
 }

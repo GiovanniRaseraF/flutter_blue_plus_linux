@@ -2,7 +2,6 @@
 #include "include/flutter_blue_plus/test.h"
 
 #include <flutter_linux/flutter_linux.h>
-#include <gtk/gtk.h>
 #include <sys/utsname.h>
 
 #include <cstring>
@@ -42,9 +41,6 @@ static void flutter_blue_plus_plugin_handle_method_call(
 
   const gchar* method = fl_method_call_get_name(method_call);
 
-  //SimpleBluez::Bluez bluez;
-  //bluez.init();
-
   if (strcmp(method, "getPlatformVersion") == 0) {
     response = get_platform_version();
 
@@ -81,6 +77,7 @@ FlMethodResponse* flutter_hot_restart(FlutterBluePlusPlugin* self) {
 }
 
 FlMethodResponse* get_platform_version() {
+  hello();
   struct utsname uname_data = {};
   uname(&uname_data);
   g_autofree gchar *version = g_strdup_printf("Linux %s", uname_data.version);
