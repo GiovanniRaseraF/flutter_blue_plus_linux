@@ -16,7 +16,13 @@ struct _MyApplication {
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
-SimpleBluez::Bluez bluez;
+class FlutterBluePlusPlugin {
+  public:
+
+  private:
+  SimpleBluez::Bluez bluez;
+}
+
 
 static FlMethodResponse* get_battery_level() {
     return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_int(30)));
@@ -35,6 +41,31 @@ static void battery_method_call_handler(FlMethodChannel* channel,
   g_autoptr(FlMethodResponse) response = nullptr;
   std::string mcall = fl_method_call_get_name(method_call);
 
+  if("flutterHotRestart" == mcall){
+
+  } 
+  else if("connectionCount" == mcall){
+
+  }
+  else if("setLogLevel" == mcall){
+
+  }
+  else if("isSupported" == mcall){
+
+  }
+  else if("getAdapterName" == mcall){
+
+  }
+  else if("getAdapterState" == mcall){}
+  else if("turnOn" == mcall){}
+  else if("turnOff" == mcall){}
+  else if("startScan" == mcall){}
+  else if("stopScan" == mcall){}
+  else if("getSystemDevices" == mcall){}
+  else if("connect" == mcall){}
+  else if("disconnect" == mcall){}
+
+
   if ("getBatteryLevel" == mcall) {
     response = get_battery_level();
   } else if("getPlatformVersion" == mcall){
@@ -46,6 +77,7 @@ static void battery_method_call_handler(FlMethodChannel* channel,
   } else {
     response = FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
   }
+
 
   g_autoptr(GError) error = nullptr;
   if (!fl_method_call_respond(method_call, response, &error)) {
