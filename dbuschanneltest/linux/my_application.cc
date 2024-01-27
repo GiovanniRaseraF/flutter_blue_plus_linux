@@ -7,6 +7,9 @@
 #endif
 
 #include "flutter/generated_plugin_registrant.h"
+#include <thread>
+#include <chrono>
+#include <atomic>
 
 struct _MyApplication {
   GtkApplication parent_instance;
@@ -16,23 +19,70 @@ struct _MyApplication {
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
+// global
+SimpleBluez::Bluez bluez;
+
+// async thread
+std::atomic_bool async_thread_active = true;
+void async_thread_function() {
+    int count = 0;
+    while (async_thread_active) {
+        bluez.run_async();
+        std::this_thread::sleep_for(std::chrono::microseconds(100));
+
+        // every 10 seconds
+        if(count % 100000 == 0){
+          std::cout << "- Bluez Running -" << std::endl;
+        }
+
+        count++;
+    }
+}
+
 class FlutterBluePlusPlugin {
   public:
+  FlutterBluePlusPlugin(){
+    bluez.init();
+    // need to run bluez into separate thread all the time
+    async_bluez_thread = std::make_shared<std::thread>(async_thread_function);
+  }
+
+  void turnOn(){
+    async_thread_active = false;
+    std::this_thread::sleep_for(std::chrono::microseconds(300));
+    async_thread_active = true;
+
+    async_bluez_thread = std::make_shared<std::thread>(async_thread_function);
+  }
+
+  void turnOff(){
+    async_thread_active = false;
+    std::this_thread::sleep_for(std::chrono::microseconds(300));
+    async_thread_active = false;
+  }
 
   private:
-  SimpleBluez::Bluez bluez;
-}
+  std::shared_ptr<std::thread> async_bluez_thread;
+};
 
+FlutterBluePlusPlugin my_plugin{};
 
-static FlMethodResponse* get_battery_level() {
-    return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_int(30)));
-}
+// static FlMethodResponse* get_battery_level() {
+//     return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_int(30)));
+// }
 
-static FlMethodResponse* get_platform_verision(){
-    return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_string("Linux Ubuntu")));
+// static FlMethodResponse* get_platform_verision(){
+//     return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_string("Linux Ubuntu")));
+// }
+// static FlMethodResponse* connected_count(){
+//     return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_int(1)));
+// }
+
+static FlMethodResponse* trunOn() {
+    return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_bool(true)));
 }
-static FlMethodResponse* connected_count(){
-    return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_int(1)));
+static FlMethodResponse* trunOff() {
+    return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_bool(false)));
 }
 
 static void battery_method_call_handler(FlMethodChannel* channel,
@@ -41,21 +91,11 @@ static void battery_method_call_handler(FlMethodChannel* channel,
   g_autoptr(FlMethodResponse) response = nullptr;
   std::string mcall = fl_method_call_get_name(method_call);
 
-  if("flutterHotRestart" == mcall){
-
-  } 
-  else if("connectionCount" == mcall){
-
-  }
-  else if("setLogLevel" == mcall){
-
-  }
-  else if("isSupported" == mcall){
-
-  }
-  else if("getAdapterName" == mcall){
-
-  }
+  if("flutterHotRestart" == mcall){} 
+  else if("connectionCount" == mcall){}
+  else if("setLogLevel" == mcall){}
+  else if("isSupported" == mcall){}
+  else if("getAdapterName" == mcall){}
   else if("getAdapterState" == mcall){}
   else if("turnOn" == mcall){}
   else if("turnOff" == mcall){}
@@ -64,20 +104,25 @@ static void battery_method_call_handler(FlMethodChannel* channel,
   else if("getSystemDevices" == mcall){}
   else if("connect" == mcall){}
   else if("disconnect" == mcall){}
-
-
-  if ("getBatteryLevel" == mcall) {
-    response = get_battery_level();
-  } else if("getPlatformVersion" == mcall){
-    response = get_platform_verision();
-  } else if("flutterHotRestart" == mcall){
-    response = get_battery_level();
-  } else if("connectedCount" == mcall){
-    response = connected_count();
-  } else {
+  else if("discoverServices" == mcall){}
+  else if("readCharacteristic" == mcall){}
+  else if("writeCharacteristic" == mcall){}
+  else if("readDescriptor" == mcall){}
+  else if("writeDescriptor" == mcall){}
+  else if("setNotifyValue" == mcall){}
+  else if("requestMtu" == mcall){}
+  else if("readRssi" == mcall){}
+  else if("requestConnectionPriority" == mcall){}
+  else if("getPhySupport" == mcall){}
+  else if("setPreferredPhy" == mcall){}
+  else if("getBondedDevices" == mcall){}
+  else if("getBondState" == mcall){}
+  else if("createBond" == mcall){}
+  else if("removeBond" == mcall){}
+  else if("clearGattCache" == mcall){}
+  else {
     response = FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
   }
-
 
   g_autoptr(GError) error = nullptr;
   if (!fl_method_call_respond(method_call, response, &error)) {
@@ -130,19 +175,7 @@ g_autoptr(FlStandardMethodCodec) codec = fl_standard_method_codec_new();
       self->battery_channel, battery_method_call_handler, self, nullptr);
   gtk_widget_grab_focus(GTK_WIDGET(view));
 }
-struct MyDBus
-{
-  int count = 0;
-  SimpleBluez::Bluez bluez;
 
-  MyDBus(){  
-    bluez.init();
-  }
-
-  int get_connection_count(){
-    return bluez.interfaces_count();
-  }
-};
 // Implements GApplication::local_command_line.
 static gboolean my_application_local_command_line(GApplication* application, gchar*** arguments, int* exit_status) {
   MyApplication* self = MY_APPLICATION(application);
@@ -177,7 +210,7 @@ static void my_application_class_init(MyApplicationClass* klass) {
 }
 
 static void my_application_init(MyApplication* self) {
-  bluez.init();
+  
 }
 
 MyApplication* my_application_new() {
