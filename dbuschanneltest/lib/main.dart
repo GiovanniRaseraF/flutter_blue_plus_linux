@@ -34,6 +34,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
   String _plat= "";
+  bool isBLESup = false;
 
   void _incrementCounter() async {
     final p = await FlutterBluePlus.getPlatformVersion();
@@ -41,6 +42,21 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {
       _counter++;
       _plat = p;
+    });
+  }
+
+  @override
+  void initState(){
+    super.initState();
+
+    isBLESupported();
+  }
+
+  void isBLESupported() async {
+    bool ret = await FlutterBluePlus.isSupported;
+
+    setState(() {
+      isBLESup = ret;
     });
   }
 
@@ -59,6 +75,7 @@ class _MyHomePageState extends State<MyHomePage> {
               'You have pushed the button this many times:',
             ),
             DBusChannel(),
+            isBLESup ? Text("BLE supported") : Text("BLE NOT supported"),
             Text(_plat),
             Text(
               '$_counter',

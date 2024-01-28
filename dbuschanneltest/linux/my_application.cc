@@ -21,7 +21,15 @@ struct _MyApplication {
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
 // global
+#define FL_STR(_str) FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_string((_str))))
+#define FL_BOOL(_bl) FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_bool((_bl))))
+#define FL_INT(_in) FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_int((_in))))
+#define FL_FLOT(_in) FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_float((_in))))
+#define FL_NOIMP FL_METHOD_RESPONSE(fl_method_not_implemented_response_new())
+
+// bluez
 SimpleBluez::Bluez bluez;
+
 enum TurnedState{
   OFF = 0, ON
 };
@@ -35,7 +43,7 @@ void async_thread_function() {
         std::this_thread::sleep_for(std::chrono::microseconds(100));
 
         // every 10 seconds
-        if(count % 100000 == 0){
+        if(count % 1000 == 0){
           std::cout << "- Bluez Running -" << std::endl;
         }
 
@@ -49,6 +57,24 @@ class FlutterBluePlusPlugin {
     bluez.init();
     // need to run bluez into separate thread all the time
     async_bluez_thread = std::make_shared<std::thread>(async_thread_function);
+
+    std::cout << "Bluez: FlutterBluePlusPlugin()" << std::endl;
+  }
+
+  ~FlutterBluePlusPlugin(){
+    turnOff();
+
+    std::cout << "Bluez: ~()" << std::endl;
+  }
+
+  int adaptersCount(){
+    auto adapters = bluez.get_adapters();
+
+    return adapters.size();
+  }
+
+  bool isSupported(){
+    return adaptersCount() > 0;
   }
 
   void turnOn(){
@@ -58,6 +84,8 @@ class FlutterBluePlusPlugin {
     async_thread_active = true;
 
     async_bluez_thread = std::make_shared<std::thread>(async_thread_function);
+
+    std::cout << "Bluez: turnOn()" << std::endl;
   }
 
   void turnOff(){
@@ -66,10 +94,15 @@ class FlutterBluePlusPlugin {
     async_thread_active = false;
     std::this_thread::sleep_for(std::chrono::microseconds(300));
     async_thread_active = false;
+
+    std::cout << "Bluez: turnOFF()" << std::endl;
   }
 
-  TurnedState turnedState(){
+  TurnedState getTurnedState(){
     std::lock_guard<std::mutex> lk_turn{turn_mutex};
+
+    std::cout << "Bluez: getTurnedState()" << std::endl;
+
     return async_thread_active ? ON : OFF;
   }
   
@@ -84,26 +117,61 @@ class FlutterBluePlusPlugin {
 FlutterBluePlusPlugin my_plugin{};
 
 static FlMethodResponse* get_battery_level() {
-    return FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
+  return FL_NOIMP;
 }
 
 static FlMethodResponse* get_platform_verision(){
-    return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_string("Linux Ubuntu")));
+  return FL_STR("Linux Ubuntu");
 }
 
 static FlMethodResponse* connected_count(){
-    return FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
+  return FL_NOIMP;
 }
 
 static FlMethodResponse* flutter_hot_restart(){
-    return FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
+  //my_plugin.turnOff();
+
+  return FL_INT(0);
 }
 
-static FlMethodResponse* trunOn() {
-    return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_bool(true)));
+static FlMethodResponse* is_supported(){
+  bool ret = my_plugin.isSupported();
+
+  return FL_BOOL(ret);
 }
-static FlMethodResponse* trunOff() {
-    return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_bool(false)));
+
+static FlMethodResponse* turn_on() {
+  bool ret_value = false;
+  TurnedState current_state = my_plugin.getTurnedState();
+
+  if(current_state == ON){
+    // no change
+    ret_value = false;
+  }else{
+    my_plugin.turnOn();
+
+    // change
+    ret_value = true;
+  }
+
+  return FL_BOOL(ret_value);
+}
+
+static FlMethodResponse* turn_off() {
+  bool ret_value = false;
+  TurnedState current_state = my_plugin.getTurnedState();
+
+  if(current_state == OFF){
+    // no change
+    ret_value = false;
+  }else{
+    my_plugin.turnOff();
+
+    // change
+    ret_value = true;
+  }
+
+  return FL_BOOL(ret_value);
 }
 
 static void battery_method_call_handler(FlMethodChannel* channel,
@@ -122,11 +190,17 @@ static void battery_method_call_handler(FlMethodChannel* channel,
     response = connected_count();
   }
   else if("setLogLevel" == mcall){}
-  else if("isSupported" == mcall){}
+  else if("isSupported" == mcall){
+    response = is_supported();
+  }
   else if("getAdapterName" == mcall){}
   else if("getAdapterState" == mcall){}
-  else if("turnOn" == mcall){}
-  else if("turnOff" == mcall){}
+  else if("turnOn" == mcall){
+    response = turn_on();
+  }
+  else if("turnOff" == mcall){
+    response = turn_off();
+  }
   else if("startScan" == mcall){}
   else if("stopScan" == mcall){}
   else if("getSystemDevices" == mcall){}
