@@ -20,19 +20,8 @@ struct _MyApplication {
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
-// global
-#define FL_STR(_str) FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_string((_str))))
-#define FL_BOOL(_bl) FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_bool((_bl))))
-#define FL_INT(_in) FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_int((_in))))
-#define FL_FLOT(_in) FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_float((_in))))
-#define FL_NOIMP FL_METHOD_RESPONSE(fl_method_not_implemented_response_new())
-
 // bluez
 SimpleBluez::Bluez bluez;
-
-enum TurnedState{
-  OFF = 0, ON
-};
 
 // async thread
 std::atomic_bool async_thread_active = true;
@@ -128,6 +117,10 @@ static FlMethodResponse* connected_count(){
   return FL_NOIMP;
 }
 
+static FlMethodResponse* set_log_level(){
+  return FL_BOOL(true);
+}
+
 static FlMethodResponse* flutter_hot_restart(){
   //my_plugin.turnOff();
 
@@ -138,6 +131,17 @@ static FlMethodResponse* is_supported(){
   bool ret = my_plugin.isSupported();
 
   return FL_BOOL(ret);
+}
+
+static FlMethodResponse* get_adapter_state(){
+  // create map
+  g_autoptr(FlValue) value = fl_value_new_map ();
+
+  // set value
+  fl_value_set_string_take(value, 
+    "adapter_state", fl_value_new_int(bmAdapterStateEnum(my_plugin.getTurnedState())));
+
+  return FL_METHOD_RESPONSE(fl_method_success_response_new(value));
 }
 
 static FlMethodResponse* turn_on() {
@@ -189,12 +193,16 @@ static void battery_method_call_handler(FlMethodChannel* channel,
   else if("connectionCount" == mcall){
     response = connected_count();
   }
-  else if("setLogLevel" == mcall){}
+  else if("setLogLevel" == mcall){
+    response = set_log_level();
+  }
   else if("isSupported" == mcall){
     response = is_supported();
   }
   else if("getAdapterName" == mcall){}
-  else if("getAdapterState" == mcall){}
+  else if("getAdapterState" == mcall){
+    response = get_adapter_state();
+  }
   else if("turnOn" == mcall){
     response = turn_on();
   }
