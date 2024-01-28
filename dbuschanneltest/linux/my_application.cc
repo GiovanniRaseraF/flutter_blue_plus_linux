@@ -10,6 +10,7 @@
 #include <thread>
 #include <chrono>
 #include <atomic>
+#include <mutex>
 
 struct _MyApplication {
   GtkApplication parent_instance;
@@ -21,6 +22,9 @@ G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
 // global
 SimpleBluez::Bluez bluez;
+enum TurnedState{
+  OFF = 0, ON
+};
 
 // async thread
 std::atomic_bool async_thread_active = true;
@@ -48,35 +52,52 @@ class FlutterBluePlusPlugin {
   }
 
   void turnOn(){
-    async_thread_active = false;
-    std::this_thread::sleep_for(std::chrono::microseconds(300));
+    turnOff(); 
+
+    std::lock_guard<std::mutex> lk_turn{turn_mutex};
     async_thread_active = true;
 
     async_bluez_thread = std::make_shared<std::thread>(async_thread_function);
   }
 
   void turnOff(){
+    std::lock_guard<std::mutex> lk_turn{turn_mutex};
+
     async_thread_active = false;
     std::this_thread::sleep_for(std::chrono::microseconds(300));
     async_thread_active = false;
   }
 
+  TurnedState turnedState(){
+    std::lock_guard<std::mutex> lk_turn{turn_mutex};
+    return async_thread_active ? ON : OFF;
+  }
+  
   private:
   std::shared_ptr<std::thread> async_bluez_thread;
+
+  // mutex
+  std::mutex turn_mutex;
+
 };
 
 FlutterBluePlusPlugin my_plugin{};
 
-// static FlMethodResponse* get_battery_level() {
-//     return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_int(30)));
-// }
+static FlMethodResponse* get_battery_level() {
+    return FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
+}
 
-// static FlMethodResponse* get_platform_verision(){
-//     return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_string("Linux Ubuntu")));
-// }
-// static FlMethodResponse* connected_count(){
-//     return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_int(1)));
-// }
+static FlMethodResponse* get_platform_verision(){
+    return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_string("Linux Ubuntu")));
+}
+
+static FlMethodResponse* connected_count(){
+    return FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
+}
+
+static FlMethodResponse* flutter_hot_restart(){
+    return FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
+}
 
 static FlMethodResponse* trunOn() {
     return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_bool(true)));
@@ -91,8 +112,15 @@ static void battery_method_call_handler(FlMethodChannel* channel,
   g_autoptr(FlMethodResponse) response = nullptr;
   std::string mcall = fl_method_call_get_name(method_call);
 
-  if("flutterHotRestart" == mcall){} 
-  else if("connectionCount" == mcall){}
+  if("flutterHotRestart" == mcall){
+    response = flutter_hot_restart();
+  } 
+  else if("getPlatformVersion" == mcall){
+    response = get_platform_verision();
+  }
+  else if("connectionCount" == mcall){
+    response = connected_count();
+  }
   else if("setLogLevel" == mcall){}
   else if("isSupported" == mcall){}
   else if("getAdapterName" == mcall){}
