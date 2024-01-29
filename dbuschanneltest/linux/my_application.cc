@@ -17,6 +17,7 @@ struct _MyApplication {
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
+
 // bluez
 SimpleBluez::Bluez bluez;
 
@@ -126,7 +127,14 @@ class FlutterBluePlusPlugin {
     adapter->clear_on_device_updated();
     
     adapter->set_on_device_updated([&](std::shared_ptr<SimpleBluez::Device> device) {
+      // fl_method_channel_invoke_method(
+      //   (((_MyApplication *)user_data)->flutter_engine_channel), 
+      //   "OnScanResponse", 
+      //   fl_value_new_map(), 
+      //   nullptr, nullptr, nullptr
+      // );
       std::cout << "Bluez: scanning - new device found" << std::endl;
+      
     });
 
     adapter->discovery_start();
@@ -335,9 +343,24 @@ static void battery_method_call_handler(FlMethodChannel* channel,
   else if("startScan" == mcall){
     std::cout << to_str(with_services) << std::endl;
 
-    // need to find to connect response to a UI method channel
+    std::cout << "method_channel: start_scan()" << std::endl;
+    auto adapter = bluez.get_adapters()[0];
+    adapter->clear_on_device_updated();
+    
+    adapter->set_on_device_updated([&user_data](std::shared_ptr<SimpleBluez::Device> device) {
+      // fl_method_channel_invoke_method(
+      //   (((_MyApplication *)user_data)->flutter_engine_channel), 
+      //   "OnScanResponse", 
+      //   fl_value_new_map(), 
+      //   nullptr, nullptr, nullptr
+      // );
+      std::cout << "Bluez: scanning - new device found" << std::endl;
+      
+    });
 
-    response = start_scan();
+    adapter->discovery_start();
+    
+    response = FL_BOOL(true);
   }
   else if("stopScan" == mcall){
     response = stop_scan();
@@ -455,9 +478,9 @@ static void my_application_activate(GApplication* application) {
 
   // methodChannel = new MethodChannel(flutterPluginBinding.getBinaryMessenger(), NAMESPACE + "/methods");
   // methodChannel.setMethodCallHandler(this);
-  // self->flutter_engine_channel = fl_method_channel_new(
-  //     fl_engine_get_binary_messenger(fl_view_get_engine(view)),
-  //     "samples.flutter.dev/methods", FL_METHOD_CODEC(codec));
+  self->flutter_engine_channel = fl_method_channel_new(
+      fl_engine_get_binary_messenger(fl_view_get_engine(view)),
+      "samples.flutter.dev/methods", FL_METHOD_CODEC(codec));
 
   fl_method_channel_set_method_call_handler(
       self->battery_channel, battery_method_call_handler, self, nullptr);
@@ -490,6 +513,7 @@ static void my_application_dispose(GObject* object) {
   MyApplication* self = MY_APPLICATION(object);
   g_clear_pointer(&self->dart_entrypoint_arguments, g_strfreev);
   g_clear_object(&self->battery_channel);
+  g_clear_object(&self->flutter_engine_channel);
   G_OBJECT_CLASS(my_application_parent_class)->dispose(object);
 }
 
