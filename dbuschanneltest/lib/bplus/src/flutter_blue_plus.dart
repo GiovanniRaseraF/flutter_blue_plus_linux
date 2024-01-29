@@ -12,11 +12,11 @@ class FlutterBluePlus {
   static bool _initialized = false;
 
   /// native platform channel
-  static final MethodChannel _methodChannel = const MethodChannel('samples.flutter.dev/dbuschannel');
+  static final MethodChannel methodChannel = const MethodChannel('samples.flutter.dev/dbuschannel');
 
   /// a broadcast stream version of the MethodChannel
   // ignore: close_sinks
-  static final StreamController<MethodCall> _methodStream = StreamController.broadcast();
+  static final StreamController<MethodCall> methodStream = StreamController.broadcast();
 
   // always keep track of these device variables
   static final Map<DeviceIdentifier, BmConnectionStateResponse> _connectionStates = {};
@@ -101,7 +101,7 @@ class FlutterBluePlus {
 
   /// Turn on Bluetooth (Android only),
   static Future<void> turnOn({int timeout = 60}) async {
-    var responseStream = FlutterBluePlus._methodStream.stream
+    var responseStream = FlutterBluePlus.methodStream.stream
         .where((m) => m.method == "OnTurnOnResponse")
         .map((m) => m.arguments)
         .map((args) => BmTurnOnResponse.fromMap(args));
@@ -139,7 +139,7 @@ class FlutterBluePlus {
       }
     }
 
-    yield* FlutterBluePlus._methodStream.stream
+    yield* FlutterBluePlus.methodStream.stream
         .where((m) => m.method == "OnAdapterStateChanged")
         .map((m) => m.arguments)
         .map((args) => BmBluetoothAdapterState.fromMap(args))
@@ -263,7 +263,7 @@ class FlutterBluePlus {
           androidScanMode: androidScanMode.value,
           androidUsesFineLocation: androidUsesFineLocation);
 
-      Stream<BmScanResponse> responseStream = FlutterBluePlus._methodStream.stream
+      Stream<BmScanResponse> responseStream = FlutterBluePlus.methodStream.stream
           .where((m) => m.method == "OnScanResponse")
           .map((m) => m.arguments)
           .map((args) => BmScanResponse.fromMap(args));
@@ -396,12 +396,12 @@ class FlutterBluePlus {
     _initialized = true;
 
     // set platform method handler
-    _methodChannel.setMethodCallHandler(_methodCallHandler);
+    methodChannel.setMethodCallHandler(_methodCallHandler);
 
     // hot restart
-    if ((await _methodChannel.invokeMethod('flutterHotRestart')) != 0) {
+    if ((await methodChannel.invokeMethod('flutterHotRestart')) != 0) {
       await Future.delayed(Duration(milliseconds: 50));
-      while ((await _methodChannel.invokeMethod('connectedCount')) != 0) {
+      while ((await methodChannel.invokeMethod('connectedCount')) != 0) {
         await Future.delayed(Duration(milliseconds: 50));
       }
     }
@@ -529,7 +529,7 @@ class FlutterBluePlus {
       }
     }
 
-    _methodStream.add(call);
+    methodStream.add(call);
 
     // cancel delayed subscriptions
     if (call.method == "OnConnectionStateChanged") {
@@ -570,7 +570,7 @@ class FlutterBluePlus {
       }
 
       // invoke
-      out = await _methodChannel.invokeMethod(method, arguments);
+      out = await methodChannel.invokeMethod(method, arguments);
 
       // log result
       if (logLevel == LogLevel.verbose) {

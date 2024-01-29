@@ -12,6 +12,7 @@ struct _MyApplication {
   GtkApplication parent_instance;
   char** dart_entrypoint_arguments;
   FlMethodChannel* battery_channel;
+  FlMethodChannel* flutter_engine_channel;
 };
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
@@ -101,19 +102,20 @@ class FlutterBluePlusPlugin {
     SimpleBluez::Adapter::DiscoveryFilter filter;
     filter.Transport = SimpleBluez::Adapter::DiscoveryFilter::TransportType::LE;
     adapter->discovery_filter(filter);
-    
+
     std::vector<std::shared_ptr<SimpleBluez::Device>> ret{};
 
-    adapter->clear_on_device_updated();
-    adapter->set_on_device_updated([&](std::shared_ptr<SimpleBluez::Device> device) {
-      ret.push_back(device);
-    });
+    ret = adapter->device_paired_get();
+    // adapter->clear_on_device_updated();
+    // adapter->set_on_device_updated([&](std::shared_ptr<SimpleBluez::Device> device) {
+    //   ret.push_back(device);
+    // });
 
-    adapter->discovery_start();
-    std::this_thread::sleep_for(std::chrono::seconds(3));
-    adapter->discovery_stop();
+    // adapter->discovery_start();
+    // std::this_thread::sleep_for(std::chrono::seconds(3));
+    // adapter->discovery_stop();
 
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    // std::this_thread::sleep_for(std::chrono::seconds(1));
 
     return ret;
   }
@@ -280,7 +282,28 @@ static void battery_method_call_handler(FlMethodChannel* channel,
   g_autoptr(FlMethodResponse) response = nullptr;
 
   std::string mcall = fl_method_call_get_name(method_call);
-  g_autoptr(FlValue) args = fl_method_call_get_args(method_call);
+/*{
+  with_services: [], 
+  with_remote_ids: [], 
+  with_names: [], 
+  with_keywords: [], 
+  with_msd: [], 
+  with_service_data: [], 
+  continuous_updates: true, 
+  continuous_divisor: 1, 
+  android_scan_mode: 2, 
+  android_uses_fine_location: false}*/
+
+#define to_str(newv) fl_value_to_string((newv))
+#define args fl_method_call_get_args(method_call)
+
+#define with_services fl_value_get_map_value(args, 0)
+#define with_remote_ids fl_value_get_map_value(args, 1)
+#define with_names fl_value_get_map_value(args, 2)
+#define with_keywords fl_value_get_map_value(args, 3)
+#define with_service_data fl_value_get_map_value(args, 4)
+#define continuous_updates fl_value_get_map_value(args, 5)
+#define continuous_divisor fl_value_get_map_value(args, 6)
 
   if("flutterHotRestart" == mcall){
     response = flutter_hot_restart();
@@ -310,6 +333,10 @@ static void battery_method_call_handler(FlMethodChannel* channel,
     response = turn_off();
   }
   else if("startScan" == mcall){
+    std::cout << to_str(with_services) << std::endl;
+
+    // need to find to connect response to a UI method channel
+
     response = start_scan();
   }
   else if("stopScan" == mcall){
@@ -418,13 +445,24 @@ static void my_application_activate(GApplication* application) {
   gtk_widget_show(GTK_WIDGET(view));
   gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(view));
 
+  // specific to battery
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
-g_autoptr(FlStandardMethodCodec) codec = fl_standard_method_codec_new();
+  g_autoptr(FlStandardMethodCodec) codec = fl_standard_method_codec_new();
+
   self->battery_channel = fl_method_channel_new(
       fl_engine_get_binary_messenger(fl_view_get_engine(view)),
       "samples.flutter.dev/dbuschannel", FL_METHOD_CODEC(codec));
+
+  // methodChannel = new MethodChannel(flutterPluginBinding.getBinaryMessenger(), NAMESPACE + "/methods");
+  // methodChannel.setMethodCallHandler(this);
+  // self->flutter_engine_channel = fl_method_channel_new(
+  //     fl_engine_get_binary_messenger(fl_view_get_engine(view)),
+  //     "samples.flutter.dev/methods", FL_METHOD_CODEC(codec));
+
   fl_method_channel_set_method_call_handler(
       self->battery_channel, battery_method_call_handler, self, nullptr);
+  // specific to battery
+
   gtk_widget_grab_focus(GTK_WIDGET(view));
 }
 
