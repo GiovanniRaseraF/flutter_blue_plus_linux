@@ -7,10 +7,6 @@
 #endif
 
 #include "flutter/generated_plugin_registrant.h"
-#include <thread>
-#include <chrono>
-#include <atomic>
-#include <mutex>
 
 struct _MyApplication {
   GtkApplication parent_instance;
@@ -32,7 +28,7 @@ void async_thread_function() {
         std::this_thread::sleep_for(std::chrono::microseconds(100));
 
         // every 10 seconds
-        if(count % 1000 == 0){
+        if(count % 10000 == 0){
           std::cout << "- Bluez Running -" << std::endl;
         }
 
@@ -87,6 +83,63 @@ class FlutterBluePlusPlugin {
     std::cout << "Bluez: turnOFF()" << std::endl;
   }
 
+  std::string getAdapterName(){
+    auto adapters = bluez.get_adapters();
+    std::cout << "Bluez: getAdapterName()" << std::endl;
+
+    if(adapters.size() <= 0) return "None";
+
+    auto ret = adapters[0]->identifier();
+    return ret;
+  }
+
+  std::vector<std::shared_ptr<SimpleBluez::Device>> getSystemDevices(){
+    std::cout << "Bluez: getSystemDevices()" << std::endl;
+
+    auto adapter = bluez.get_adapters()[0];
+
+    SimpleBluez::Adapter::DiscoveryFilter filter;
+    filter.Transport = SimpleBluez::Adapter::DiscoveryFilter::TransportType::LE;
+    adapter->discovery_filter(filter);
+    
+    std::vector<std::shared_ptr<SimpleBluez::Device>> ret{};
+
+    adapter->clear_on_device_updated();
+    adapter->set_on_device_updated([&](std::shared_ptr<SimpleBluez::Device> device) {
+      ret.push_back(device);
+    });
+
+    adapter->discovery_start();
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+    adapter->discovery_stop();
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    return ret;
+  }
+
+  void startScan(){
+    std::cout << "Bluez: startScan()" << std::endl;
+    auto adapter = bluez.get_adapters()[0];
+    adapter->clear_on_device_updated();
+    
+    adapter->set_on_device_updated([&](std::shared_ptr<SimpleBluez::Device> device) {
+      std::cout << "Bluez: scanning - new device found" << std::endl;
+    });
+
+    adapter->discovery_start();
+  }
+
+  void stopScan(){
+    std::cout << "Bluez: stopScan()" << std::endl;
+    auto adapter = bluez.get_adapters()[0];
+    
+    adapter->discovery_stop();
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    adapter->clear_on_device_updated();
+  }
+
   TurnedState getTurnedState(){
     std::lock_guard<std::mutex> lk_turn{turn_mutex};
 
@@ -110,7 +163,11 @@ static FlMethodResponse* get_battery_level() {
 }
 
 static FlMethodResponse* get_platform_verision(){
-  return FL_STR("Linux Ubuntu");
+  struct utsname name;
+  uname(&name);
+  std::string ret = std::string(name.sysname) + std::string(name.version);
+
+  return FL_STR(ret.c_str());
 }
 
 static FlMethodResponse* connected_count(){
@@ -131,6 +188,12 @@ static FlMethodResponse* is_supported(){
   bool ret = my_plugin.isSupported();
 
   return FL_BOOL(ret);
+}
+
+static FlMethodResponse* get_adapter_name(){
+  auto name = my_plugin.getAdapterName();
+
+  return FL_STR(name.c_str() );
 }
 
 static FlMethodResponse* get_adapter_state(){
@@ -178,11 +241,46 @@ static FlMethodResponse* turn_off() {
   return FL_BOOL(ret_value);
 }
 
+static FlMethodResponse* get_system_devices() {
+  auto devices = my_plugin.getSystemDevices();
+
+  g_autoptr(FlValue) ret = fl_value_new_map();
+  fl_value_set_string_take(ret, "devices", fl_value_new_list());
+
+  int i = 0;
+  for_each(devices.begin(), devices.end(), [&](auto d){
+    fl_value_append_take(fl_value_get_map_value(ret, 0), fl_value_new_map());
+
+    fl_value_set_string_take(fl_value_get_list_value(fl_value_get_map_value(ret, 0), i), 
+      "remote_id", fl_value_new_string(d->address().c_str()));
+    fl_value_set_string_take(fl_value_get_list_value(fl_value_get_map_value(ret, 0), i), 
+      "platform_name", fl_value_new_string(d->name().c_str()));
+
+    i++;
+  });
+
+  return FL_METHOD_RESPONSE(fl_method_success_response_new(ret));
+}
+
+static FlMethodResponse* start_scan() {
+  my_plugin.startScan();
+
+  return FL_BOOL(true);
+}
+
+static FlMethodResponse* stop_scan() {
+  my_plugin.stopScan();
+
+  return FL_BOOL(true);
+}
+
 static void battery_method_call_handler(FlMethodChannel* channel,
                                         FlMethodCall* method_call,
                                         gpointer user_data) {
   g_autoptr(FlMethodResponse) response = nullptr;
+
   std::string mcall = fl_method_call_get_name(method_call);
+  g_autoptr(FlValue) args = fl_method_call_get_args(method_call);
 
   if("flutterHotRestart" == mcall){
     response = flutter_hot_restart();
@@ -199,7 +297,9 @@ static void battery_method_call_handler(FlMethodChannel* channel,
   else if("isSupported" == mcall){
     response = is_supported();
   }
-  else if("getAdapterName" == mcall){}
+  else if("getAdapterName" == mcall){
+    response = get_adapter_name();
+  }
   else if("getAdapterState" == mcall){
     response = get_adapter_state();
   }
@@ -209,27 +309,69 @@ static void battery_method_call_handler(FlMethodChannel* channel,
   else if("turnOff" == mcall){
     response = turn_off();
   }
-  else if("startScan" == mcall){}
-  else if("stopScan" == mcall){}
-  else if("getSystemDevices" == mcall){}
-  else if("connect" == mcall){}
-  else if("disconnect" == mcall){}
-  else if("discoverServices" == mcall){}
-  else if("readCharacteristic" == mcall){}
-  else if("writeCharacteristic" == mcall){}
-  else if("readDescriptor" == mcall){}
-  else if("writeDescriptor" == mcall){}
-  else if("setNotifyValue" == mcall){}
-  else if("requestMtu" == mcall){}
-  else if("readRssi" == mcall){}
-  else if("requestConnectionPriority" == mcall){}
-  else if("getPhySupport" == mcall){}
-  else if("setPreferredPhy" == mcall){}
-  else if("getBondedDevices" == mcall){}
-  else if("getBondState" == mcall){}
-  else if("createBond" == mcall){}
-  else if("removeBond" == mcall){}
-  else if("clearGattCache" == mcall){}
+  else if("startScan" == mcall){
+    response = start_scan();
+  }
+  else if("stopScan" == mcall){
+    response = stop_scan();
+  }
+  else if("getSystemDevices" == mcall){
+    response = get_system_devices();
+  }
+  else if("connect" == mcall){
+    response = FL_NOIMP;
+  }
+  else if("disconnect" == mcall){
+    response = FL_NOIMP;
+  }
+  else if("discoverServices" == mcall){
+    response = FL_NOIMP;
+  }
+  else if("readCharacteristic" == mcall){
+    response = FL_NOIMP;
+  }
+  else if("writeCharacteristic" == mcall){
+    response = FL_NOIMP;
+  }
+  else if("readDescriptor" == mcall){
+    response = FL_NOIMP;
+  }
+  else if("writeDescriptor" == mcall){
+    response = FL_NOIMP;
+  }
+  else if("setNotifyValue" == mcall){
+    response = FL_NOIMP;
+  }
+  else if("requestMtu" == mcall){
+    response = FL_NOIMP;
+  }
+  else if("readRssi" == mcall){
+    response = FL_NOIMP;
+  }
+  else if("requestConnectionPriority" == mcall){
+    response = FL_NOIMP;
+  }
+  else if("getPhySupport" == mcall){
+    response = FL_NOIMP;
+  }
+  else if("setPreferredPhy" == mcall){
+    response = FL_NOIMP;
+  }
+  else if("getBondedDevices" == mcall){
+    response = FL_NOIMP;
+  }
+  else if("getBondState" == mcall){
+    response = FL_NOIMP;
+  }
+  else if("createBond" == mcall){
+    response = FL_NOIMP;
+  }
+  else if("removeBond" == mcall){
+    response = FL_NOIMP;
+  }
+  else if("clearGattCache" == mcall){
+    response = FL_NOIMP;
+  }
   else {
     response = FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
   }

@@ -3,11 +3,18 @@
 
 #include <gtk/gtk.h>
 #include <math.h>
+#include <gmodule.h>
+#include <cstring>
 #include <boost/array.hpp>
 #include <boost/filesystem.hpp>
+#include <sys/utsname.h>
 #include <simplebluez/Bluez.h>
-#include <simplebluez/Adapter.h>
 #include <iostream>
+#include <iomanip>
+#include <thread>
+#include <chrono>
+#include <atomic>
+#include <mutex>
 
 G_DECLARE_FINAL_TYPE(MyApplication, my_application, MY, APPLICATION,
                      GtkApplication)
@@ -53,5 +60,7 @@ static int bmAdapterStateEnum(TurnedState state) {
         case ON:                                 return 4;
     }
 }
+
+
 
 #endif // FLUTTER_MY_APPLICATION_H_
