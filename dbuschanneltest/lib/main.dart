@@ -12,7 +12,11 @@ import 'screens/scan_screen.dart';
 
 void main() {
   FlutterBluePlus.setLogLevel(LogLevel.verbose, color: true);
-  print(FlutterBluePlus.methodChannel.name.toString());
+
+  FlutterBluePlus.methodStream.stream.listen((element){
+    print("------new data: ${element.toString()}");
+  });
+
   runApp(const FlutterBlueApp());
 }
 
