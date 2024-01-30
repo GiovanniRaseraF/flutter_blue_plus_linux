@@ -109,16 +109,6 @@ class FlutterBluePlusPlugin {
     std::vector<std::shared_ptr<SimpleBluez::Device>> ret{};
 
     ret = adapter->device_paired_get();
-    // adapter->clear_on_device_updated();
-    // adapter->set_on_device_updated([&](std::shared_ptr<SimpleBluez::Device> device) {
-    //   ret.push_back(device);
-    // });
-
-    // adapter->discovery_start();
-    // std::this_thread::sleep_for(std::chrono::seconds(3));
-    // adapter->discovery_stop();
-
-    // std::this_thread::sleep_for(std::chrono::seconds(1));
 
     return ret;
   }
@@ -129,6 +119,7 @@ class FlutterBluePlusPlugin {
     adapter->clear_on_device_updated();
     
     adapter->set_on_device_updated([&](std::shared_ptr<SimpleBluez::Device> device) {
+      // create the response
       auto map = fl_value_new_map();
       fl_value_set_string_take(map, "advertisements", fl_value_new_list());
 
@@ -136,12 +127,12 @@ class FlutterBluePlusPlugin {
       fl_value_append_take(map_l, fl_value_new_map());
 
       #define adver fl_value_get_list_value(map_l, 0)
-      fl_value_set_string_take(adver, "remote_id", fl_value_new_string(device->address().c_str()));
-      fl_value_set_string_take(adver, "platform_name", fl_value_new_string(device->name().c_str()));
-      fl_value_set_string_take(adver, "adv_name", fl_value_new_string(device->alias().c_str()));
-      fl_value_set_string_take(adver, "connectable", fl_value_new_bool(true));
+      fl_value_set_string_take(adver, "remote_id",      fl_value_new_string(device->address().c_str()));
+      fl_value_set_string_take(adver, "platform_name",  fl_value_new_string(device->name().c_str()));
+      fl_value_set_string_take(adver, "adv_name",       fl_value_new_string(device->alias().c_str()));
+      fl_value_set_string_take(adver, "connectable",    fl_value_new_bool(true));
       fl_value_set_string_take(adver, "tx_power_level", fl_value_new_int((int)device->tx_power()));
-      fl_value_set_string_take(adver, "rssi", fl_value_new_int(1));
+      fl_value_set_string_take(adver, "rssi",           fl_value_new_int(1));
 
       // responde to ui 
       fl_method_channel_invoke_method(
@@ -150,8 +141,6 @@ class FlutterBluePlusPlugin {
         map, 
         nullptr, nullptr, nullptr
       );
-
-      std::cout << "Bluez: scanning - new device found" << std::endl;
     });
 
     adapter->discovery_start();
@@ -305,30 +294,18 @@ static void battery_method_call_handler(FlMethodChannel* channel,
                                         FlMethodCall* method_call,
                                         gpointer user_data) {
   g_autoptr(FlMethodResponse) response = nullptr;
-
   std::string mcall = fl_method_call_get_name(method_call);
-/*{
-  with_services: [], 
-  with_remote_ids: [], 
-  with_names: [], 
-  with_keywords: [], 
-  with_msd: [], 
-  with_service_data: [], 
-  continuous_updates: true, 
-  continuous_divisor: 1, 
-  android_scan_mode: 2, 
-  android_uses_fine_location: false}*/
 
-#define to_str(newv) fl_value_to_string((newv))
-#define args fl_method_call_get_args(method_call)
+  #define to_str(newv) fl_value_to_string((newv))
+  #define args fl_method_call_get_args(method_call)
 
-#define with_services fl_value_get_map_value(args, 0)
-#define with_remote_ids fl_value_get_map_value(args, 1)
-#define with_names fl_value_get_map_value(args, 2)
-#define with_keywords fl_value_get_map_value(args, 3)
-#define with_service_data fl_value_get_map_value(args, 4)
-#define continuous_updates fl_value_get_map_value(args, 5)
-#define continuous_divisor fl_value_get_map_value(args, 6)
+  #define with_services fl_value_get_map_value(args, 0)
+  #define with_remote_ids fl_value_get_map_value(args, 1)
+  #define with_names fl_value_get_map_value(args, 2)
+  #define with_keywords fl_value_get_map_value(args, 3)
+  #define with_service_data fl_value_get_map_value(args, 4)
+  #define continuous_updates fl_value_get_map_value(args, 5)
+  #define continuous_divisor fl_value_get_map_value(args, 6)
 
   if("flutterHotRestart" == mcall){
     response = flutter_hot_restart();
