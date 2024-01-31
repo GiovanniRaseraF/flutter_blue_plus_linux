@@ -56,7 +56,7 @@ class BluetoothCharacteristic {
   ///   - anytime `write()` is called
   ///   - anytime a notification arrives (if subscribed)
   ///   - and when first listened to, it re-emits the last value for convenience
-  Stream<List<int>> get lastValueStream => FlutterBluePlus.methodStream.stream
+  Stream<List<int>> get lastValueStream => FlutterBluePlus._methodStream.stream
       .where((m) => m.method == "OnCharacteristicReceived" || m.method == "OnCharacteristicWritten")
       .map((m) => m.arguments)
       .map((args) => BmCharacteristicData.fromMap(args))
@@ -70,7 +70,7 @@ class BluetoothCharacteristic {
   /// this stream emits values:
   ///   - anytime `read()` is called
   ///   - anytime a notification arrives (if subscribed)
-  Stream<List<int>> get onValueReceived => FlutterBluePlus.methodStream.stream
+  Stream<List<int>> get onValueReceived => FlutterBluePlus._methodStream.stream
       .where((m) => m.method == "OnCharacteristicReceived")
       .map((m) => m.arguments)
       .map((args) => BmCharacteristicData.fromMap(args))
@@ -115,7 +115,7 @@ class BluetoothCharacteristic {
         secondaryServiceUuid: null,
       );
 
-      var responseStream = FlutterBluePlus.methodStream.stream
+      var responseStream = FlutterBluePlus._methodStream.stream
           .where((m) => m.method == "OnCharacteristicReceived")
           .map((m) => m.arguments)
           .map((args) => BmCharacteristicData.fromMap(args))
@@ -188,7 +188,7 @@ class BluetoothCharacteristic {
         value: value,
       );
 
-      var responseStream = FlutterBluePlus.methodStream.stream
+      var responseStream = FlutterBluePlus._methodStream.stream
           .where((m) => m.method == "OnCharacteristicWritten")
           .map((m) => m.arguments)
           .map((args) => BmCharacteristicData.fromMap(args))
@@ -253,7 +253,7 @@ class BluetoothCharacteristic {
 
       // Notifications & Indications are configured by writing to the
       // Client Characteristic Configuration Descriptor (CCCD)
-      Stream<BmDescriptorData> responseStream = FlutterBluePlus.methodStream.stream
+      Stream<BmDescriptorData> responseStream = FlutterBluePlus._methodStream.stream
           .where((m) => m.method == "OnDescriptorWritten")
           .map((m) => m.arguments)
           .map((args) => BmDescriptorData.fromMap(args))

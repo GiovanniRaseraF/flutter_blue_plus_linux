@@ -12,13 +12,9 @@ struct _MyApplication {
   GtkApplication parent_instance;
   char** dart_entrypoint_arguments;
 };
-
 static FlMethodChannel* flutter_blue_plus_plugin_channel;
-static FlMethodChannel* flutter_UI_channel;
-static FlMethodChannel* globalMethods;
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
-
 
 // bluez
 SimpleBluez::Bluez bluez;
@@ -117,6 +113,7 @@ class FlutterBluePlusPlugin {
     std::cout << "Bluez: startScan()" << std::endl;
     auto adapter = bluez.get_adapters()[0];
     adapter->clear_on_device_updated();
+    devices.clear();
     
     adapter->set_on_device_updated([&](std::shared_ptr<SimpleBluez::Device> device) {
       // create the response
@@ -133,6 +130,8 @@ class FlutterBluePlusPlugin {
       fl_value_set_string_take(adver, "connectable",    fl_value_new_bool(true));
       fl_value_set_string_take(adver, "tx_power_level", fl_value_new_int((int)device->tx_power()));
       fl_value_set_string_take(adver, "rssi",           fl_value_new_int(1));
+
+      devices[device->address()] = device;
 
       // responde to ui 
       fl_method_channel_invoke_method(
@@ -163,9 +162,36 @@ class FlutterBluePlusPlugin {
 
     return async_thread_active ? ON : OFF;
   }
+
+  void connectTo(std::string rm_id){
+    devices[rm_id]->connect();
+
+    auto map = fl_value_new_map(); 
+    fl_value_set_string_take(map, "remote_id", fl_value_new_string(rm_id.c_str()));
+    fl_value_set_string_take(map, "connection_state", fl_value_new_int(1));
+
+    // responde to ui 
+    fl_method_channel_invoke_method(
+      flutter_blue_plus_plugin_channel, 
+      "OnConnectionStateChanged", 
+      map, 
+      nullptr, nullptr, nullptr
+    );
+  }
+
+  std::vector<std::shared_ptr<SimpleBluez::Service>> discoverServices(std::string rm_id){
+    devices[rm_id]->set_on_services_resolved([](){
+      std::cout << "new service discovered" << std::endl;
+    });
+
+    return devices[rm_id]->services();
+  }
   
   private:
   std::shared_ptr<std::thread> async_bluez_thread;
+
+  // devices
+  std::map<std::string, std::shared_ptr<SimpleBluez::Device>> devices{};
 
   // mutex
   std::mutex turn_mutex;
@@ -175,7 +201,7 @@ class FlutterBluePlusPlugin {
 FlutterBluePlusPlugin my_plugin{};
 
 static FlMethodResponse* get_battery_level() {
-  return FL_NOIMP;
+  return FL_NOIMP_RESPONSE;
 }
 
 static FlMethodResponse* get_platform_verision(){
@@ -183,44 +209,44 @@ static FlMethodResponse* get_platform_verision(){
   uname(&name);
   std::string ret = std::string(name.sysname) + std::string(name.version);
 
-  return FL_STR(ret.c_str());
+  return FL_STR_RESPONSE(ret.c_str());
 }
 
 static FlMethodResponse* connected_count(){
-  return FL_NOIMP;
+  return FL_NOIMP_RESPONSE;
 }
 
 static FlMethodResponse* set_log_level(){
-  return FL_BOOL(true);
+  return FL_BOOL_RESPONSE(true);
 }
 
 static FlMethodResponse* flutter_hot_restart(){
   //my_plugin.turnOff();
 
-  return FL_INT(0);
+  return FL_INT_RESPONSE(0);
 }
 
 static FlMethodResponse* is_supported(){
   bool ret = my_plugin.isSupported();
 
-  return FL_BOOL(ret);
+  return FL_BOOL_RESPONSE(ret);
 }
 
 static FlMethodResponse* get_adapter_name(){
   auto name = my_plugin.getAdapterName();
 
-  return FL_STR(name.c_str() );
+  return FL_STR_RESPONSE(name.c_str() );
 }
 
 static FlMethodResponse* get_adapter_state(){
   // create map
-  g_autoptr(FlValue) value = fl_value_new_map ();
+  g_autoptr(FlValue) value = fl_value_new_map();
 
   // set value
   fl_value_set_string_take(value, 
     "adapter_state", fl_value_new_int(bmAdapterStateEnum(my_plugin.getTurnedState())));
 
-  return FL_METHOD_RESPONSE(fl_method_success_response_new(value));
+  return FL_RESP(value);
 }
 
 static FlMethodResponse* turn_on() {
@@ -237,7 +263,7 @@ static FlMethodResponse* turn_on() {
     ret_value = true;
   }
 
-  return FL_BOOL(ret_value);
+  return FL_BOOL_RESPONSE(ret_value);
 }
 
 static FlMethodResponse* turn_off() {
@@ -254,7 +280,19 @@ static FlMethodResponse* turn_off() {
     ret_value = true;
   }
 
-  return FL_BOOL(ret_value);
+  return FL_BOOL_RESPONSE(ret_value);
+}
+
+static FlMethodResponse* start_scan() {
+  my_plugin.startScan();
+
+  return FL_BOOL_RESPONSE(true);
+}
+
+static FlMethodResponse* stop_scan() {
+  my_plugin.stopScan();
+
+  return FL_BOOL_RESPONSE(true);
 }
 
 static FlMethodResponse* get_system_devices() {
@@ -275,20 +313,60 @@ static FlMethodResponse* get_system_devices() {
     i++;
   });
 
-  return FL_METHOD_RESPONSE(fl_method_success_response_new(ret));
+  return FL_RESP(ret);
 }
 
-static FlMethodResponse* start_scan() {
-  my_plugin.startScan();
+static FlMethodResponse* connect(std::string rm_id) {
+  my_plugin.connectTo(rm_id);
 
-  return FL_BOOL(true);
+  return FL_BOOL_RESPONSE(true);
 }
 
-static FlMethodResponse* stop_scan() {
-  my_plugin.stopScan();
-
-  return FL_BOOL(true);
+static FlMethodResponse* disconnect() {
+  return FL_NOIMP_RESPONSE;
 }
+
+static FlMethodResponse* discover_services(std::string rm_id) {
+  auto services = my_plugin.discoverServices(rm_id);
+
+  auto map = FL_MAP;
+  FL_MAP_SET(map, "remote_id",    FL_STR(rm_id.c_str()));
+  FL_MAP_SET(map, "success",      FL_BOOL(true));
+  FL_MAP_SET(map, "error_code",   FL_INT(0));
+  FL_MAP_SET(map, "error_string", FL_STR(""));
+
+  auto services_list = FL_LIST;
+  for(auto s : services){
+    auto serv = FL_MAP;  
+
+    // service
+    FL_MAP_SET(serv, "service_uuid", FL_STR(s->uuid().c_str()));
+    FL_MAP_SET(serv, "remote_id", FL_STR(rm_id.c_str()));
+    FL_MAP_SET(serv, "is_primary", FL_BOOL(false));
+
+    // charac
+    auto characs = FL_LIST;
+    for(auto c : s->characteristics()){
+      auto c_map = FL_MAP;
+      FL_MAP_SET(c_map, "remote_id", FL_STR(rm_id.c_str()));
+      FL_MAP_SET(c_map, "service_id", FL_STR(s->uuid().c_str()));
+      FL_MAP_SET(c_map, "characteristic_id", FL_STR(c->uuid().c_str()));
+
+      FL_APPEND(characs, c_map);
+    }
+    FL_MAP_SET(serv, "characteristics", characs);
+
+    FL_APPEND(services_list, serv);
+  }
+
+  FL_MAP_SET(map, "services", services_list);
+  
+  // responde to ui 
+  TO_UI("OnDiscoveredServices", map);
+
+  return FL_BOOL_RESPONSE(true);
+}
+
 
 static void battery_method_call_handler(FlMethodChannel* channel,
                                         FlMethodCall* method_call,
@@ -299,6 +377,7 @@ static void battery_method_call_handler(FlMethodChannel* channel,
   #define to_str(newv) fl_value_to_string((newv))
   #define args fl_method_call_get_args(method_call)
 
+  // startScanning
   #define with_services fl_value_get_map_value(args, 0)
   #define with_remote_ids fl_value_get_map_value(args, 1)
   #define with_names fl_value_get_map_value(args, 2)
@@ -306,6 +385,10 @@ static void battery_method_call_handler(FlMethodChannel* channel,
   #define with_service_data fl_value_get_map_value(args, 4)
   #define continuous_updates fl_value_get_map_value(args, 5)
   #define continuous_divisor fl_value_get_map_value(args, 6)
+
+  // connect
+  #define remote_id fl_value_get_map_value(args, 0)
+  #define auto_connect fl_value_get_map_value(args, 1)
 
   if("flutterHotRestart" == mcall){
     response = flutter_hot_restart();
@@ -344,58 +427,62 @@ static void battery_method_call_handler(FlMethodChannel* channel,
     response = get_system_devices();
   }
   else if("connect" == mcall){
-    response = FL_NOIMP;
+    std::string remote_id_str = fl_value_to_string(remote_id);
+    
+    response = connect(remote_id_str);
   }
   else if("disconnect" == mcall){
-    response = FL_NOIMP;
+    response = disconnect();
   }
   else if("discoverServices" == mcall){
-    response = FL_NOIMP;
+    std::string remote_id_str = fl_value_to_string(args);
+
+    response = discover_services(remote_id_str);
   }
   else if("readCharacteristic" == mcall){
-    response = FL_NOIMP;
+    response = FL_NOIMP_RESPONSE;
   }
   else if("writeCharacteristic" == mcall){
-    response = FL_NOIMP;
+    response = FL_NOIMP_RESPONSE;
   }
   else if("readDescriptor" == mcall){
-    response = FL_NOIMP;
+    response = FL_NOIMP_RESPONSE;
   }
   else if("writeDescriptor" == mcall){
-    response = FL_NOIMP;
+    response = FL_NOIMP_RESPONSE;
   }
   else if("setNotifyValue" == mcall){
-    response = FL_NOIMP;
+    response = FL_NOIMP_RESPONSE;
   }
   else if("requestMtu" == mcall){
-    response = FL_NOIMP;
+    response = FL_NOIMP_RESPONSE;
   }
   else if("readRssi" == mcall){
-    response = FL_NOIMP;
+    response = FL_NOIMP_RESPONSE;
   }
   else if("requestConnectionPriority" == mcall){
-    response = FL_NOIMP;
+    response = FL_NOIMP_RESPONSE;
   }
   else if("getPhySupport" == mcall){
-    response = FL_NOIMP;
+    response = FL_NOIMP_RESPONSE;
   }
   else if("setPreferredPhy" == mcall){
-    response = FL_NOIMP;
+    response = FL_NOIMP_RESPONSE;
   }
   else if("getBondedDevices" == mcall){
-    response = FL_NOIMP;
+    response = FL_NOIMP_RESPONSE;
   }
   else if("getBondState" == mcall){
-    response = FL_NOIMP;
+    response = FL_NOIMP_RESPONSE;
   }
   else if("createBond" == mcall){
-    response = FL_NOIMP;
+    response = FL_NOIMP_RESPONSE;
   }
   else if("removeBond" == mcall){
-    response = FL_NOIMP;
+    response = FL_NOIMP_RESPONSE;
   }
   else if("clearGattCache" == mcall){
-    response = FL_NOIMP;
+    response = FL_NOIMP_RESPONSE;
   }
   else {
     response = FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());

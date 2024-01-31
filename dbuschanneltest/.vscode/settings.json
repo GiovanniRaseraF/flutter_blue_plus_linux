@@ -4,6 +4,7 @@
     "iomanip": "cpp",
     "typeindex": "cpp",
     "typeinfo": "cpp",
-    "chrono": "cpp"
+    "chrono": "cpp",
+    "*.tcc": "cpp"
   }
 }

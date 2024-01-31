@@ -117,7 +117,7 @@ class BluetoothDevice {
         autoConnect: autoConnect,
       );
 
-      var responseStream = FlutterBluePlus.methodStream.stream
+      var responseStream = FlutterBluePlus._methodStream.stream
           .where((m) => m.method == "OnConnectionStateChanged")
           .map((m) => m.arguments)
           .map((args) => BmConnectionStateResponse.fromMap(args))
@@ -193,7 +193,7 @@ class BluetoothDevice {
       // remove from auto connect list if there
       FlutterBluePlus._autoConnect.remove(remoteId);
 
-      var responseStream = FlutterBluePlus.methodStream.stream
+      var responseStream = FlutterBluePlus._methodStream.stream
           .where((m) => m.method == "OnConnectionStateChanged")
           .map((m) => m.arguments)
           .map((args) => BmConnectionStateResponse.fromMap(args))
@@ -236,7 +236,7 @@ class BluetoothDevice {
     List<BluetoothService> result = [];
 
     try {
-      var responseStream = FlutterBluePlus.methodStream.stream
+      var responseStream = FlutterBluePlus._methodStream.stream
           .where((m) => m.method == "OnDiscoveredServices")
           .map((m) => m.arguments)
           .map((args) => BmDiscoverServicesResult.fromMap(args))
@@ -296,7 +296,7 @@ class BluetoothDevice {
     if (FlutterBluePlus._connectionStates[remoteId] != null) {
       initialValue = _bmToConnectionState(FlutterBluePlus._connectionStates[remoteId]!.connectionState);
     }
-    return FlutterBluePlus.methodStream.stream
+    return FlutterBluePlus._methodStream.stream
         .where((m) => m.method == "OnConnectionStateChanged")
         .map((m) => m.arguments)
         .map((args) => BmConnectionStateResponse.fromMap(args))
@@ -317,7 +317,7 @@ class BluetoothDevice {
   Stream<int> get mtu {
     // get initial value from our cache
     int initialValue = FlutterBluePlus._mtuValues[remoteId]?.mtu ?? 23;
-    return FlutterBluePlus.methodStream.stream
+    return FlutterBluePlus._methodStream.stream
         .where((m) => m.method == "OnMtuChanged")
         .map((m) => m.arguments)
         .map((args) => BmMtuChangedResponse.fromMap(args))
@@ -330,7 +330,7 @@ class BluetoothDevice {
   ///  - uses the GAP Services Changed characteristic (0x2A05)
   ///  - you must re-call discoverServices() when services are reset
   Stream<void> get onServicesReset {
-    return FlutterBluePlus.methodStream.stream
+    return FlutterBluePlus._methodStream.stream
         .where((m) => m.method == "OnServicesReset")
         .map((m) => m.arguments)
         .map((args) => BmBluetoothDevice.fromMap(args))
@@ -353,7 +353,7 @@ class BluetoothDevice {
     int rssi = 0;
 
     try {
-      var responseStream = FlutterBluePlus.methodStream.stream
+      var responseStream = FlutterBluePlus._methodStream.stream
           .where((m) => m.method == "OnReadRssi")
           .map((m) => m.arguments)
           .map((args) => BmReadRssiResult.fromMap(args))
@@ -431,7 +431,7 @@ class BluetoothDevice {
         mtu: desiredMtu,
       );
 
-      var responseStream = FlutterBluePlus.methodStream.stream
+      var responseStream = FlutterBluePlus._methodStream.stream
           .where((m) => m.method == "OnMtuChanged")
           .map((m) => m.arguments)
           .map((args) => BmMtuChangedResponse.fromMap(args))
@@ -531,7 +531,7 @@ class BluetoothDevice {
     await mtx.take();
 
     try {
-      var responseStream = FlutterBluePlus.methodStream.stream
+      var responseStream = FlutterBluePlus._methodStream.stream
           .where((m) => m.method == "OnBondStateChanged")
           .map((m) => m.arguments)
           .map((args) => BmBondStateResponse.fromMap(args))
@@ -574,7 +574,7 @@ class BluetoothDevice {
     await mtx.take();
 
     try {
-      var responseStream = FlutterBluePlus.methodStream.stream
+      var responseStream = FlutterBluePlus._methodStream.stream
           .where((m) => m.method == "OnBondStateChanged")
           .map((m) => m.arguments)
           .map((args) => BmBondStateResponse.fromMap(args))
@@ -632,7 +632,7 @@ class BluetoothDevice {
 
     // get current state if needed
     if (FlutterBluePlus._bondStates[remoteId] == null) {
-      var val = await FlutterBluePlus.methodChannel
+      var val = await FlutterBluePlus._methodChannel
           .invokeMethod('getBondState', remoteId.str)
           .then((args) => BmBondStateResponse.fromMap(args));
       // update _bondStates if it is still null after the await
@@ -641,7 +641,7 @@ class BluetoothDevice {
       }
     }
 
-    yield* FlutterBluePlus.methodStream.stream
+    yield* FlutterBluePlus._methodStream.stream
         .where((m) => m.method == "OnBondStateChanged")
         .map((m) => m.arguments)
         .map((args) => BmBondStateResponse.fromMap(args))
