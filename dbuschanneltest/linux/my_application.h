@@ -49,8 +49,7 @@ MyApplication *my_application_new();
 
 // send data to UI
 #define TO_UI(method_name, value_to_send) \
-fl_method_channel_invoke_method( \
-  flutter_blue_plus_plugin_channel, \
+fl_method_channel_invoke_method(flutter_blue_plus_plugin_channel, \
   (method_name), \
   (value_to_send), \
   nullptr, nullptr, nullptr)

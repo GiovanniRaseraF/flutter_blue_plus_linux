@@ -117,29 +117,24 @@ class FlutterBluePlusPlugin {
     
     adapter->set_on_device_updated([&](std::shared_ptr<SimpleBluez::Device> device) {
       // create the response
-      auto map = fl_value_new_map();
-      fl_value_set_string_take(map, "advertisements", fl_value_new_list());
+      auto map = FL_MAP;
+      auto map_l = FL_LIST;
+      FL_MAP_SET(map, "advertisements", map_l);
 
-      #define map_l fl_value_get_map_value(map, 0)
-      fl_value_append_take(map_l, fl_value_new_map());
+      auto adver = FL_MAP;
+      FL_MAP_SET(adver, "remote_id",      FL_STR(device->address().c_str()));
+      FL_MAP_SET(adver, "platform_name",  FL_STR(device->name().c_str()));
+      FL_MAP_SET(adver, "adv_name",       FL_STR(device->alias().c_str()));
+      FL_MAP_SET(adver, "connectable",    FL_BOOL(true));
+      FL_MAP_SET(adver, "tx_power_level", FL_INT((int)device->tx_power()));
+      FL_MAP_SET(adver, "rssi",           FL_INT(1));
+      FL_APPEND(map_l, adver);
 
-      #define adver fl_value_get_list_value(map_l, 0)
-      fl_value_set_string_take(adver, "remote_id",      fl_value_new_string(device->address().c_str()));
-      fl_value_set_string_take(adver, "platform_name",  fl_value_new_string(device->name().c_str()));
-      fl_value_set_string_take(adver, "adv_name",       fl_value_new_string(device->alias().c_str()));
-      fl_value_set_string_take(adver, "connectable",    fl_value_new_bool(true));
-      fl_value_set_string_take(adver, "tx_power_level", fl_value_new_int((int)device->tx_power()));
-      fl_value_set_string_take(adver, "rssi",           fl_value_new_int(1));
-
+      // devices
       devices[device->address()] = device;
 
       // responde to ui 
-      fl_method_channel_invoke_method(
-        flutter_blue_plus_plugin_channel, 
-        "OnScanResponse", 
-        map, 
-        nullptr, nullptr, nullptr
-      );
+      TO_UI("OnScanResponse", map);
     });
 
     adapter->discovery_start();
@@ -166,17 +161,12 @@ class FlutterBluePlusPlugin {
   void connectTo(std::string rm_id){
     devices[rm_id]->connect();
 
-    auto map = fl_value_new_map(); 
-    fl_value_set_string_take(map, "remote_id", fl_value_new_string(rm_id.c_str()));
-    fl_value_set_string_take(map, "connection_state", fl_value_new_int(1));
+    auto map = FL_MAP; 
+    FL_MAP_SET(map, "remote_id",        FL_STR(rm_id.c_str()));
+    FL_MAP_SET(map, "connection_state", FL_INT(1));
 
     // responde to ui 
-    fl_method_channel_invoke_method(
-      flutter_blue_plus_plugin_channel, 
-      "OnConnectionStateChanged", 
-      map, 
-      nullptr, nullptr, nullptr
-    );
+    TO_UI("OnConnectionStateChanged", map);
   }
 
   std::vector<std::shared_ptr<SimpleBluez::Service>> discoverServices(std::string rm_id){
@@ -298,20 +288,17 @@ static FlMethodResponse* stop_scan() {
 static FlMethodResponse* get_system_devices() {
   auto devices = my_plugin.getSystemDevices();
 
-  g_autoptr(FlValue) ret = fl_value_new_map();
-  fl_value_set_string_take(ret, "devices", fl_value_new_list());
+  auto ret = FL_MAP;
+  auto ret_l = FL_LIST;
 
-  int i = 0;
   for_each(devices.begin(), devices.end(), [&](auto d){
-    fl_value_append_take(fl_value_get_map_value(ret, 0), fl_value_new_map());
+    auto dev_map = FL_MAP;
 
-    fl_value_set_string_take(fl_value_get_list_value(fl_value_get_map_value(ret, 0), i), 
-      "remote_id", fl_value_new_string(d->address().c_str()));
-    fl_value_set_string_take(fl_value_get_list_value(fl_value_get_map_value(ret, 0), i), 
-      "platform_name", fl_value_new_string(d->name().c_str()));
-
-    i++;
+    FL_MAP_SET(dev_map, "remote_id", FL_STR(d->address().c_str()));
+    FL_MAP_SET(dev_map, "platform_name", FL_STR(d->name().c_str()));
+    FL_APPEND(ret_l, dev_map);
   });
+  FL_MAP_SET(ret, "devices", ret_l);
 
   return FL_RESP(ret);
 }
