@@ -1,11 +1,4 @@
 #pragma once
-#include <gtk/gtk.h>
-#include <math.h>
-#include <gmodule.h>
-#include <cstring>
-#include <boost/array.hpp>
-#include <boost/filesystem.hpp>
-#include <sys/utsname.h>
 #include <simplebluez/Bluez.h>
 #include <iostream>
 #include <iomanip>
@@ -14,6 +7,32 @@
 #include <atomic>
 #include <mutex>
 #include <map>
+
+//////////////////////////////////////////////////////////////////////
+// ███    ███  ███████   ██████      
+// ████  ████  ██       ██           
+// ██ ████ ██  ███████  ██   ███     
+// ██  ██  ██       ██  ██    ██     
+// ██      ██  ███████   ██████ 
+//     
+// ██   ██  ███████  ██       ██████   ███████  ██████   ███████ 
+// ██   ██  ██       ██       ██   ██  ██       ██   ██  ██      
+// ███████  █████    ██       ██████   █████    ██████   ███████ 
+// ██   ██  ██       ██       ██       ██       ██   ██       ██ 
+// ██   ██  ███████  ███████  ██       ███████  ██   ██  ███████ 
+
+// states
+enum TurnedState{
+  OFF = 0, ON
+};
+
+//See: BmAdapterStateEnum
+static int bmAdapterStateEnum(TurnedState state) {
+    switch (state) {
+        case OFF:                                  return 6;
+        case ON:                                 return 4;
+    }
+}
 
 // bluez
 SimpleBluez::Bluez bluez;

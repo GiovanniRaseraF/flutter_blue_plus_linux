@@ -5,8 +5,6 @@
 #include <math.h>
 #include <gmodule.h>
 #include <cstring>
-#include <boost/array.hpp>
-#include <boost/filesystem.hpp>
 #include <sys/utsname.h>
 #include <simplebluez/Bluez.h>
 #include <iostream>
@@ -46,6 +44,8 @@ MyApplication *my_application_new();
 #define FL_LIST fl_value_new_list()
 #define FL_APPEND(_list, _val) fl_value_append_take(_list, _val)
 
+#define FL_ARGS(_m_call) fl_method_call_get_args(_m_call)
+#define TO_STR(newv) fl_value_to_string((newv))
 
 // send data to UI
 #define TO_UI(method_name, value_to_send) \
@@ -53,34 +53,5 @@ fl_method_channel_invoke_method(flutter_blue_plus_plugin_channel, \
   (method_name), \
   (value_to_send), \
   nullptr, nullptr, nullptr)
-
-// states
-enum TurnedState{
-  OFF = 0, ON
-};
-
-
-//////////////////////////////////////////////////////////////////////
-// ███    ███  ███████   ██████      
-// ████  ████  ██       ██           
-// ██ ████ ██  ███████  ██   ███     
-// ██  ██  ██       ██  ██    ██     
-// ██      ██  ███████   ██████ 
-//     
-// ██   ██  ███████  ██       ██████   ███████  ██████   ███████ 
-// ██   ██  ██       ██       ██   ██  ██       ██   ██  ██      
-// ███████  █████    ██       ██████   █████    ██████   ███████ 
-// ██   ██  ██       ██       ██       ██       ██   ██       ██ 
-// ██   ██  ███████  ███████  ██       ███████  ██   ██  ███████ 
-
-//See: BmAdapterStateEnum
-static int bmAdapterStateEnum(TurnedState state) {
-    switch (state) {
-        case OFF:                                  return 6;
-        case ON:                                 return 4;
-    }
-}
-
-
 
 #endif // FLUTTER_MY_APPLICATION_H_

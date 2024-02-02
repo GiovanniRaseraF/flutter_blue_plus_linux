@@ -18,8 +18,6 @@ static FlMethodChannel* flutter_blue_plus_plugin_channel;
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
-
-
 FlutterBluePlusPlugin my_plugin{};
 
 static FlMethodResponse* get_battery_level() {
@@ -62,13 +60,13 @@ static FlMethodResponse* get_adapter_name(){
 
 static FlMethodResponse* get_adapter_state(){
   // create map
-  g_autoptr(FlValue) value = fl_value_new_map();
+  auto map = FL_MAP;
+  auto value = (bmAdapterStateEnum(my_plugin.getTurnedState()));
 
   // set value
-  fl_value_set_string_take(value, 
-    "adapter_state", fl_value_new_int(bmAdapterStateEnum(my_plugin.getTurnedState())));
+  FL_MAP_SET(map, "adapter_state", FL_INT(value));
 
-  return FL_RESP(value);
+  return FL_RESP(map);
 }
 
 static FlMethodResponse* turn_on() {
@@ -157,7 +155,8 @@ static FlMethodResponse* get_system_devices() {
 
 static FlMethodResponse* connect(std::string rm_id) {
   my_plugin.connectTo(rm_id, [&](std::string id){
-    auto map = FL_MAP; 
+    auto map = FL_MAP;
+    
     FL_MAP_SET(map, "remote_id",        FL_STR(id.c_str()));
     FL_MAP_SET(map, "connection_state", FL_INT(1));
 
@@ -194,10 +193,10 @@ static FlMethodResponse* discover_services(std::string rm_id) {
     auto characs = FL_LIST;
     for(auto c : s->characteristics()){
       auto c_map = FL_MAP;
+      
       FL_MAP_SET(c_map, "remote_id", FL_STR(rm_id.c_str()));
       FL_MAP_SET(c_map, "service_id", FL_STR(s->uuid().c_str()));
       FL_MAP_SET(c_map, "characteristic_id", FL_STR(c->uuid().c_str()));
-
       FL_APPEND(characs, c_map);
     }
     FL_MAP_SET(serv, "characteristics", characs);
@@ -213,15 +212,13 @@ static FlMethodResponse* discover_services(std::string rm_id) {
   return FL_BOOL_RESPONSE(true);
 }
 
-
 static void battery_method_call_handler(FlMethodChannel* channel,
                                         FlMethodCall* method_call,
                                         gpointer user_data) {
   g_autoptr(FlMethodResponse) response = nullptr;
   std::string mcall = fl_method_call_get_name(method_call);
 
-  #define to_str(newv) fl_value_to_string((newv))
-  #define args fl_method_call_get_args(method_call)
+  auto args = FL_ARGS(method_call);
 
   // startScanning
   #define with_services fl_value_get_map_value(args, 0)
@@ -331,7 +328,7 @@ static void battery_method_call_handler(FlMethodChannel* channel,
     response = FL_NOIMP_RESPONSE;
   }
   else {
-    response = FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
+    response = FL_NOIMP_RESPONSE;
   }
 
   g_autoptr(GError) error = nullptr;
