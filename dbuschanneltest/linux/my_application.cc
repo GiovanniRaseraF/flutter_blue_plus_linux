@@ -185,18 +185,35 @@ static FlMethodResponse* discover_services(std::string rm_id) {
     auto serv = FL_MAP;  
 
     // service
-    FL_MAP_SET(serv, "service_uuid", FL_STR(s->uuid().c_str()));
-    FL_MAP_SET(serv, "remote_id", FL_STR(rm_id.c_str()));
-    FL_MAP_SET(serv, "is_primary", FL_BOOL(false));
+    FL_MAP_SET(serv, "service_uuid",  FL_STR(s->uuid().c_str()));
+    FL_MAP_SET(serv, "remote_id",     FL_STR(rm_id.c_str()));
+    FL_MAP_SET(serv, "is_primary",    FL_BOOL(false));
 
     // charac
     auto characs = FL_LIST;
     for(auto c : s->characteristics()){
       auto c_map = FL_MAP;
+      auto d_list = FL_LIST;
+      auto p_map = FL_MAP;
       
-      FL_MAP_SET(c_map, "remote_id", FL_STR(rm_id.c_str()));
-      FL_MAP_SET(c_map, "service_id", FL_STR(s->uuid().c_str()));
-      FL_MAP_SET(c_map, "characteristic_id", FL_STR(c->uuid().c_str()));
+      FL_MAP_SET(c_map, "descriptors",          d_list);
+      FL_MAP_SET(c_map, "remote_id",            FL_STR(rm_id.c_str()));
+      FL_MAP_SET(c_map, "service_uuid",         FL_STR(s->uuid().c_str()));
+      FL_MAP_SET(c_map, "characteristic_uuid",  FL_STR(c->uuid().c_str()));
+
+      // properties
+      FL_MAP_SET(p_map, "broadcast",                    FL_BOOL(true));
+      FL_MAP_SET(p_map, "read",                         FL_BOOL(true));
+      FL_MAP_SET(p_map, "write_without_response",       FL_BOOL(true));
+      FL_MAP_SET(p_map, "write",                        FL_BOOL(true));
+      FL_MAP_SET(p_map, "notify",                       FL_BOOL(true));
+      FL_MAP_SET(p_map, "indicate",                     FL_BOOL(true));
+      FL_MAP_SET(p_map, "authenticated_signed_writes",  FL_BOOL(true));
+      FL_MAP_SET(p_map, "extended_properties",          FL_BOOL(true));
+      FL_MAP_SET(p_map, "notify_encryption_required",   FL_BOOL(true));
+      FL_MAP_SET(p_map, "indicate_encryption_required", FL_BOOL(true));
+      FL_MAP_SET(c_map, "properties", p_map);
+
       FL_APPEND(characs, c_map);
     }
     FL_MAP_SET(serv, "characteristics", characs);
@@ -209,7 +226,7 @@ static FlMethodResponse* discover_services(std::string rm_id) {
   // responde to ui 
   TO_UI("OnDiscoveredServices", map);
 
-  return FL_BOOL_RESPONSE(true);
+  return FL_RESP(map);
 }
 
 static void battery_method_call_handler(FlMethodChannel* channel,
